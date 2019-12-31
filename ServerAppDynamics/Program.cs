@@ -21,6 +21,13 @@ namespace ServerAppDynamics
 			ExecuteServer();
 		}
 
+		private static bool isValidPath(String path)
+		{
+			if (path.Equals("/") || path.Equals("\\")) return true;
+
+			return Regex.IsMatch(path, @"^\/([A-z0-9-_+]+\/)*([A-z0-9]+)$");
+
+		}
 
 		public static void ExecuteServer()
 		{
@@ -89,8 +96,48 @@ namespace ServerAppDynamics
 					Console.WriteLine("Text received -> {0} ", data);
 					Console.WriteLine("Args: " + string.Join(",", args));
 
-					message = Encoding.ASCII.GetBytes(data);
 
+					switch (args[0])
+					{
+						case "HELLO":
+							message = Encoding.ASCII.GetBytes("Hi");
+							break;
+
+						case "TIME":
+							DateTime utctime = DateTime.UtcNow;
+							utctime.ToString();
+							message = Encoding.ASCII.GetBytes(utctime.ToString());
+							break;
+
+						case "DIR":
+							string path = args.Length == 1 ? "\\" : args[1];
+							if (isValidPath(path))
+							{
+								if (Directory.Exists(Directory.GetCurrentDirectory() + path))
+								{
+									message = Encoding.ASCII.GetBytes("DIR.");
+									Console.WriteLine(Directory.GetCurrentDirectory() + path);
+									String[] s = Directory.GetFiles(Directory.GetCurrentDirectory() + path);
+									String[] p = Directory.GetDirectories(Directory.GetCurrentDirectory() + path);
+									Console.WriteLine(String.Join(",", s));
+									Console.WriteLine(String.Join(",", p));
+								}
+								else
+								{
+									message = Encoding.ASCII.GetBytes("Path directory does not exit. Try a new one.");
+								}
+
+							}
+							else
+							{
+								message = Encoding.ASCII.GetBytes("Path error");
+							}
+
+							break;
+						default:
+							message = Encoding.ASCII.GetBytes("Command not valid. Try with HELLO, TIME or DIR.");
+							break;
+					}
 
 
 					// Send a message to Client 
