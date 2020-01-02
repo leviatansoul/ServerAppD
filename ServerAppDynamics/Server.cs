@@ -45,8 +45,7 @@ namespace ServerAppDynamics
             while (true)
             {
                 try
-                {
-                    
+                {                    
                     Console.WriteLine("Server starting");
                     Server.Instance.ExecuteServer();
                 }
@@ -71,16 +70,13 @@ namespace ServerAppDynamics
 
         private void ExecuteServer()
         {
-            // Establish the local endpoint 
-            // for the socket. Dns.GetHostName 
-            // returns the name of the host 
-            // running the application. 
+            // Establish the local endpoint for the socket. 
+            // Dns.GetHostName returns the name of the host running the application. 
             IPHostEntry ipHost = Dns.GetHostEntry(Dns.GetHostName());
             IPAddress ipAddr = ipHost.AddressList[0];
-            IPEndPoint localEndPoint = new IPEndPoint(ipAddr, 11111);
+            IPEndPoint localEndPoint = new IPEndPoint(ipAddr, 10000);
 
-            // Creation TCP/IP Socket using 
-            // Socket Class Costructor 
+            // Creation TCP/IP Socket using Socket Class Costructor 
             Socket listener = new Socket(ipAddr.AddressFamily,
                         SocketType.Stream, ProtocolType.Tcp);
 
@@ -89,55 +85,44 @@ namespace ServerAppDynamics
             try
             {
 
-                // Using Bind() method we associate a 
-                // network address to the Server Socket 
-                // All client that will connect to this 
-                // Server Socket must know this network 
-                // Address 
+                // Using Bind() method we associate a network address to the Server Socket 
+                // All client that will connect to this Server Socket must know this network Address 
                 listener.Bind(localEndPoint);
 
-                // Using Listen() method we create 
-                // the Client list that will want 
-                // to connect to Server 
+                // Using Listen() method we create the Client list that will want to connect to Server 
                 listener.Listen(10);
 
                
                 while (true)
                 {
 
-                    Console.WriteLine("Waiting connection ... ");
+                    Console.WriteLine("\n\nWaiting connection ... ");
 
-                    // Suspend while waiting for 
-                    // incoming connection Using 
-                    // Accept() method the server 
-                    // will accept connection of client 
+                    // Suspend while waiting for incoming connection  
+                    // Using Accept() method the server will accept connection of client 
                     clientSocket = listener.Accept();
 
                     // Data buffer 
-                    byte[] bytes = new Byte[1024];
-                    string data = null;
-                    string[] args = null;
-                    byte[] message = null;
+                    byte[] buffer = new Byte[1024];
+                    string data = null; //The text recieved
+                    string[] args = null; //The command recieved
+                    byte[] message = null; //The message to answer the client
 
                     while (true)
                     {
+                        int numByte = clientSocket.Receive(buffer);
+                        data += Encoding.ASCII.GetString(buffer, 0, numByte);
 
-                        int numByte = clientSocket.Receive(bytes);
-
-                        data += Encoding.ASCII.GetString(bytes,
-                                                0, numByte);
-
-                        if (data.IndexOf("<EOF>") > -1)
+                        if (data.IndexOf("<EOF>") > -1) //Check if we have obtained the complete msg
                         {
-                            data = data.Substring(0, data.Length - 5);
+                            data = data.Substring(0, data.Length - 5); //Remove the EOF of the msg
                             args = data.Split(' ');
                             break;
                         }
 
                     }
-
-                    Console.WriteLine("Text received -> {0} ", data);
-                    Console.WriteLine("Args: " + string.Join(",", args));
+                                  
+                    Console.WriteLine("Arguments recieved: " + string.Join(" ", args));
 
 
                     switch (args[0])
@@ -148,22 +133,37 @@ namespace ServerAppDynamics
 
                         case "TIME":
                             DateTime utctime = DateTime.UtcNow;
-                            utctime.ToString();
-                            message = Encoding.ASCII.GetBytes(utctime.ToString());
+                            message = Encoding.ASCII.GetBytes("Time in UTC format: "+utctime.ToString());
                             break;
 
                         case "DIR":
                             string path = args.Length == 1 ? "\\" : args[1];
+
                             if (isValidPath(path))
                             {
                                 if (Directory.Exists(Directory.GetCurrentDirectory() + path))
                                 {
-                                    message = Encoding.ASCII.GetBytes("DIR.");
-                                    Console.WriteLine(Directory.GetCurrentDirectory() + path);
-                                    String[] s = Directory.GetFiles(Directory.GetCurrentDirectory() + path);
-                                    String[] p = Directory.GetDirectories(Directory.GetCurrentDirectory() + path);
-                                    Console.WriteLine(String.Join(",", s));
-                                    Console.WriteLine(String.Join(",", p));
+
+                                    string dir = Directory.GetCurrentDirectory();
+                                    string[] files = Directory.GetFiles(dir + path);
+                                    string[] directories = Directory.GetDirectories(dir + path);
+
+                                    List<string> list = new List<string>();
+                                    
+                                    //Filtering the values to remove the local directory path
+                                    for (int i = 0; i < files.Length; i++)
+                                    {
+                                        list.Add(files[i].Substring(Directory.GetCurrentDirectory().Length));
+                                    }
+
+                                    for (int i = 0; i < directories.Length; i++)
+                                    {
+                                        list.Add(directories[i].Substring(Directory.GetCurrentDirectory().Length));
+                                    }
+
+                                    message = Encoding.ASCII.GetBytes("\nPath: "+dir+path+"\n\nList of files and directories:\n"+string.Join(", \n", list));
+
+                                   
                                 }
                                 else
                                 {
@@ -173,7 +173,7 @@ namespace ServerAppDynamics
                             }
                             else
                             {
-                                message = Encoding.ASCII.GetBytes("Path error");
+                                message = Encoding.ASCII.GetBytes("Path error. Introduce a valid path format. Example /home");
                             }
 
                             break;
@@ -183,14 +183,12 @@ namespace ServerAppDynamics
                     }
 
 
-                    // Send a message to Client 
-                    // using Send() method 
+                    // Send a message to Client using Send() method 
                     clientSocket.Send(message);
+                    Console.WriteLine("Server answer -> "+Encoding.ASCII.GetString(message));
 
-                    // Close client Socket using the 
-                    // Close() method. After closing, 
-                    // we can use the closed Socket 
-                    // for a new Client Connection 
+                    // Close client Socket using the Close() method.
+                    // After closing, we can use the closed Socket for a new Client Connection 
                     clientSocket.Shutdown(SocketShutdown.Both);
                     clientSocket.Close();
                 }
