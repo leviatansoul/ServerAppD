@@ -137,7 +137,7 @@ namespace ServerAppDynamics
                             break;
 
                         case "DIR":
-                            string path = args.Length == 1 ? "\\" : args[1];
+                            string path = args.Length == 1 ? "/" : args[1];
 
                             if (isValidPath(path))
                             {
