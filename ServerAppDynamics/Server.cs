@@ -104,24 +104,15 @@ namespace ServerAppDynamics
 
                     // Data buffer 
                     byte[] buffer = new Byte[1024];
-                    string data = null; //The text recieved
                     string[] args = null; //The command recieved
                     byte[] message = null; //The message to answer the client
 
-                    while (true)
-                    {
-                        int numByte = clientSocket.Receive(buffer);
-                        data += Encoding.ASCII.GetString(buffer, 0, numByte);
 
-                        if (data.IndexOf("<EOF>") > -1) //Check if we have obtained the complete msg
-                        {
-                            data = data.Substring(0, data.Length - 5); //Remove the EOF of the msg
-                            args = data.Split(' ');
-                            break;
-                        }
+                    int numByte = clientSocket.Receive(buffer);
+                    string data = Encoding.ASCII.GetString(buffer, 0, numByte);
+                    args = data.Split(' ');
 
-                    }
-                                  
+
                     Console.WriteLine("Arguments recieved: " + string.Join(" ", args));
 
 
